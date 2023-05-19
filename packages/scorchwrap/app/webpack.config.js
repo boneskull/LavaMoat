@@ -27,6 +27,7 @@ module.exports = {
     new ProgressPlugin(),
     new MiniCssExtractPlugin({
       filename: 'styles/[name].css',
+      experimentalUseImportModule: false
     }),
   ],
   module: {

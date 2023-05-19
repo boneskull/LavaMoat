@@ -35,8 +35,7 @@ const JAVASCRIPT_MODULE_TYPE_AUTO = "javascript/auto";
 const JAVASCRIPT_MODULE_TYPE_DYNAMIC = "javascript/dynamic";
 const JAVASCRIPT_MODULE_TYPE_ESM = "javascript/esm";
 
-
-const RUNTIME_PATH = "./_LM_RUNTIME_";//path.resolve(__dirname, "./runtime.js");
+const RUNTIME_PATH = "./_LM_RUNTIME_"; //path.resolve(__dirname, "./runtime.js");
 
 /**
  * @param {string} path
@@ -127,9 +126,14 @@ const wrapGeneratorMaker = ({ runChecks }) => {
       // originalGenerate adds requirements to options.runtimeRequirements
 
       // TODO: find a nicer way to do it maybe?
-      if(module.rawRequest === RUNTIME_PATH) {
+      if (module.rawRequest === RUNTIME_PATH) {
         return originalGeneratedSource;
       }
+      // if(module.loaders[0] && module.loaders[0].loader.includes('node_modules/css-loader/dist/cjs.js')) {
+      // if (module.rawRequest.includes("node_modules/css-loader/dist/")) {
+      //   console.error(">>>", module.rawRequest, module.loaders);
+      //   return originalGeneratedSource;
+      // }
 
       // Turn off "use strict" being added in front of modules on final wrapping by webpack.
       // If anything attempts to reverse it, we want to ignore it
@@ -151,7 +155,7 @@ const wrapGeneratorMaker = ({ runChecks }) => {
 
       const packageId = fakeAA(module.rawRequest);
 
-      const { before, after, source, sourceChanged } = wrapper({
+      let { before, after, source, sourceChanged } = wrapper({
         // There's probably a good reason why webpack stores source in those objects instead
         // of strings. Turning it into a string here might mean we're loosing some caching.
         // Wrapper checks if transforms changed the source and indicates it, so that we can
@@ -160,7 +164,7 @@ const wrapGeneratorMaker = ({ runChecks }) => {
         id: packageId,
         runtimeKit: processRequirements(options.runtimeRequirements, module),
         runChecks,
-        evalKitFunctionName: `__webpack_require__('${RUNTIME_PATH}')`
+        evalKitFunctionName: `__webpack_require__('${RUNTIME_PATH}')`,
       });
 
       diag.rawDebug(3, {
@@ -179,6 +183,10 @@ const wrapGeneratorMaker = ({ runChecks }) => {
       //   };
       //   `+before;
       // }
+
+      if (module.rawRequest.includes("node_modules/css-loader/dist/")) {
+        before = "debugger;" + before;
+      }
 
       // using this in webpack.config.ts complained about made up issues
       if (sourceChanged) {
@@ -240,14 +248,39 @@ class ScorchWrapPlugin {
 
     compiler.options.entry.main.import.unshift(RUNTIME_PATH);
 
+    let mainCompilationWarnings;
+
     compiler.hooks.compilation.tap(
       PLUGIN_NAME,
       (compilation, { normalModuleFactory }) => {
-        compilation.warnings.push(
-          new WebpackError(
-            "ScorchWrapPlugin: Concatenation of modules disabled - not compatible with LavaMoat wrapped modules."
-          )
-        );
+        if (!mainCompilationWarnings) {
+          mainCompilationWarnings = compilation.warnings;
+          mainCompilationWarnings.push(
+            new WebpackError(
+              "ScorchWrapPlugin: Concatenation of modules disabled - not compatible with LavaMoat wrapped modules."
+            )
+          );
+        }
+        if (compilation.compiler.isChild()) {
+          if (
+            compilation.compiler.name?.startsWith("mini-css-extract-plugin")
+          ) {
+            // Check if it's a child compilation used by a specific plugin
+            mainCompilationWarnings.push(
+              new WebpackError(
+                "ScorchWrapPlugin: SKIPPING child compilation for" + compilation.compiler.name
+              )
+            );
+            return;
+          } else {
+            mainCompilationWarnings.push(
+              new WebpackError(
+                "ScorchWrapPlugin: Entered child compilation for " + compilation.compiler.name
+              )
+            );
+          }
+        }
+
         const runChecks = this.options.runChecks || diag.level > 0;
         normalModuleFactory.hooks.generator
           .for(JAVASCRIPT_MODULE_TYPE_AUTO)
