@@ -10,11 +10,17 @@
  * @property {number} [diagnosticsVerbosity] - a number representing diagnostics output verbosity, the larger the more overwhelming
  */
 
-const { NormalModule, WebpackError } = require("webpack");
+const path = require("path");
+const {
+  NormalModule,
+  WebpackError,
+  NormalModuleReplacementPlugin,
+  // ModuleDependency,
+} = require("webpack");
 const { wrapper } = require("./wrapper");
 const diag = require("./diagnostics");
 
-const ConcatSource = require("webpack-sources").ConcatSource;
+const { ConcatSource, RawSource } = require("webpack-sources");
 // @ts-ignore // this one doesn't have official types
 const RUNTIME_GLOBALS = require("webpack/lib/RuntimeGlobals");
 
@@ -28,6 +34,9 @@ const RUNTIME_GLOBALS = require("webpack/lib/RuntimeGlobals");
 const JAVASCRIPT_MODULE_TYPE_AUTO = "javascript/auto";
 const JAVASCRIPT_MODULE_TYPE_DYNAMIC = "javascript/dynamic";
 const JAVASCRIPT_MODULE_TYPE_ESM = "javascript/esm";
+
+
+const RUNTIME_PATH = "./_LM_RUNTIME_";//path.resolve(__dirname, "./runtime.js");
 
 /**
  * @param {string} path
@@ -117,6 +126,11 @@ const wrapGeneratorMaker = ({ runChecks }) => {
       const originalGeneratedSource = originalGenerate.apply(this, arguments);
       // originalGenerate adds requirements to options.runtimeRequirements
 
+      // TODO: find a nicer way to do it maybe?
+      if(module.rawRequest === RUNTIME_PATH) {
+        return originalGeneratedSource;
+      }
+
       // Turn off "use strict" being added in front of modules on final wrapping by webpack.
       // If anything attempts to reverse it, we want to ignore it
       if (
@@ -146,6 +160,7 @@ const wrapGeneratorMaker = ({ runChecks }) => {
         id: packageId,
         runtimeKit: processRequirements(options.runtimeRequirements, module),
         runChecks,
+        evalKitFunctionName: `__webpack_require__('${RUNTIME_PATH}')`
       });
 
       diag.rawDebug(3, {
@@ -153,6 +168,17 @@ const wrapGeneratorMaker = ({ runChecks }) => {
         requirements: options.runtimeRequirements,
         sourceChanged,
       });
+
+      // isEntryModule is deprecated and breaks bacause no chunk graph available
+      // if(shouldGenerateRuntime && module.isEntryModule()){
+      //   shouldGenerateRuntime = false;
+      //   // add the runtime once.
+      //   before = `
+      //   window.__LM__ = window.__LM__ || ()=>{
+      //     console.log('works')
+      //   };
+      //   `+before;
+      // }
 
       // using this in webpack.config.ts complained about made up issues
       if (sourceChanged) {
@@ -182,6 +208,11 @@ class ScorchWrapPlugin {
   constructor(options = {}) {
     this.options = options;
     diag.level = options.diagnosticsVerbosity || 0;
+
+    // this.replacementPlugin = new NormalModuleReplacementPlugin(
+    //   /_LM_RUNTIME_/,
+    //   RUNTIME_PATH
+    // );
   }
   /**
    * @param {Compiler} compiler the compiler instance
@@ -191,6 +222,23 @@ class ScorchWrapPlugin {
     // Concatenation won't work with wrapped modules. Have to disable it.
     compiler.options.optimization.concatenateModules = false;
     // TODO: Research. If we fiddle a little with how we wrap the module, it might be possible to get inlining to work eventually.
+
+    // this.replacementPlugin.apply(compiler);
+
+    // compiler.hooks.compilation.tap('EntryDependencyPlugin', (compilation) => {
+    //   compilation.hooks.buildModule.tap('EntryDependencyPlugin', (module) => {
+    //     // Check if this is the entry module
+    //     if (module.isEntryModule()) {
+    //       // Add a dependency on lodash
+    //       console.error('aaaaa');
+    //       const dep = new ModuleDependency();
+    //       dep.request = '_LM_RUNTIME_';
+    //       module.addDependency(dep);
+    //     }
+    //   });
+    // });
+
+    compiler.options.entry.main.import.unshift(RUNTIME_PATH);
 
     compiler.hooks.compilation.tap(
       PLUGIN_NAME,
@@ -223,6 +271,148 @@ class ScorchWrapPlugin {
             runChecks,
           })
         );
+
+        // =================
+        const MOD_NAME = "_LM_RUNTIME_";
+
+        // compilation.hooks.resolve.tapAsync(
+        //   'LMLMResolverPlugin',
+        //   (request, resolveContext, callback) => {
+        //     if (request.request === MOD_NAME || request.rawRequest === MOD_NAME) {
+        //       console.error('zzz', request  )
+        //       const resolvedPath = path.resolve(__dirname, './runtime.js');
+        //       // Update the resolved request path
+        //       request.request = resolvedPath;
+        //     }
+        //     callback();
+        //   }
+        // );
+
+        // compilation.hooks.additionalChunkAssets.tap("PLUGIN_NAME", () => {
+        //   console.error(">>>", 1);
+        //   const source = 'console.error("$$$")';
+
+        //   const moduleFactory = compilation.moduleFactory;
+
+        //   // Create a module from a string
+        //   const module = moduleFactory.create({
+        //     type: "javascript/auto",
+        //     request: "./string-module.js",
+        //     userRequest: "./string-module.js",
+        //     rawSource: 'export default "Hello world!";',
+        //   });
+
+        //   // Add the module to a chunk
+        //   compilation.chunks.forEach((chunk) => {
+        //     chunk.addModule(module);
+        //   });
+        //   // const module = new compilation.moduleFactory.create({
+        //   //   type: "javascript/auto",
+        //   //   request: MOD_NAME,
+        //   //   userRequest: MOD_NAME,
+        //   // });
+
+        //   // compilation.addModule(
+        //   //   new RawSource(source),
+        //   //   {
+        //   //     identifier: ()=>MOD_NAME,
+        //   //     type: 'javascript/auto'
+        //   //   }
+        //   // );
+        //   // compilation.chunks.forEach((chunk) => {
+        //   //   chunk.addModule(RawSource(source));
+        //   //   chunk.addModuleDependencies([module]);
+        //   //   console.error(">>>");
+        //   // });
+        // });
+
+        let mmm = null;
+
+        // normalModuleFactory.hooks.createModule.tap(PLUGIN_NAME, (module) => {
+        //   console.error(">>", module.rawRequest);
+
+        //   if (!mmm) {
+        //     mmm = module;
+
+        //     const customModuleDependency = new module.constructor.Dependency(
+        //       module.userRequest
+        //     );
+
+        //     // Add the dependency to the module
+        //     module.dependencies.push(customModuleDependency);
+
+        //     // Resolve the module request
+        //     const resolvedModule = normalModuleFactory.resolverFactory
+        //       .get("normal")
+        //       .resolveSync({}, "", "/path/to/customModule.js");
+
+        //     // Update the module's resource and context
+        //     module.resource = resolvedModule;
+        //     module.context = "";
+
+        //     // Return the modified module
+        //     return module;
+
+        //     const stringModule = new NormalModule({
+        //       request: MOD_NAME,
+        //       context: module.context,
+        //       rawRequest: MOD_NAME,
+        //       resource: MOD_NAME,
+        //       parser: module.parser,
+        //       generator: module.generator,
+        //       // generator: {generate: ()=>{
+        //       //   return new RawSource(`console.error('$$$')`);
+        //       // }},
+        //       type: "javascript/auto",
+        //       userRequest: MOD_NAME,
+        //       loaders: [],
+        //     });
+        //     stringModule.buildInfo = {
+        //       strict: false,
+        //     };
+
+        //     // Set the module code for the newly created module
+        //     stringModule._source = new RawSource(`console.error('$$$')`);
+
+        //     // Add the new module to the compilation
+        //     compilation.modules.add(stringModule);
+        //   }
+        // });
+
+        // compilation.hooks.buildModule.tap(PLUGIN_NAME, (module) => {
+        //   // if(require('util').inspect(module).includes("./node_modules/@chainsafe/persistent-merkle-tree/lib/gindex.js")) {
+        //     // }
+        //     if(!mmm){
+        //       mmm= module;
+        //         console.error('>>>', module)
+
+        //     const MOD_NAME = '_LM_RUNTIME_';
+        //     const stringModule = new NormalModule({
+        //       request: MOD_NAME,
+        //       context: mmm.context,
+        //       rawRequest: MOD_NAME,
+        //       resource: MOD_NAME,
+        //       parser: mmm.parser,
+        //       generator: mmm.generator,
+        //       // generator: {generate: ()=>{
+        //       //   return new RawSource(`console.error('$$$')`);
+        //       // }},
+        //       type: "javascript/auto",
+        //       userRequest: MOD_NAME,
+        //       loaders: [],
+        //     });
+        //     stringModule._isEvaluatingSideEffects = true;
+        //     stringModule.buildInfo = {
+        //       strict: false,
+        //     };
+
+        //     // Set the module code for the newly created module
+        //     stringModule._source = new RawSource(`console.error('$$$')`);
+
+        //     // Add the new module to the compilation
+        //     compilation.modules.add(stringModule);
+        //   }
+        // });
 
         // TODO: add later hooks to optionally verify correctness and totality
         // of wrapping for the paranoid mode.

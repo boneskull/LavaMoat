@@ -1,10 +1,10 @@
-lockdown({
-  errorTaming: "unsafe",
-  mathTaming: "unsafe",
-  dateTaming: "unsafe",
-  stackFiltering: "verbose",
-  // don't use console taming
-});
+// lockdown({
+//   errorTaming: "unsafe",
+//   mathTaming: "unsafe",
+//   dateTaming: "unsafe",
+//   // stackFiltering: "verbose",
+//   // don't use console taming
+// });
 
 (function () {
   const { create, freeze, assign, defineProperty } = Object;
@@ -12,7 +12,6 @@ lockdown({
   const NAME_globalThis = "G";
   const NAME_scopeTerminator = "ST";
   const NAME_runtimeHandler = "RH";
-  const NAME_getLavaMoatEvalKitForCompartment = "__LM__";
 
   // strictScopeTerminator from SES is not strict enough - `has` would only return true for globals and here we want to prevent reaching into the scope where local variables from bundle runtime are available.
   const stricterScopeTerminator = freeze(
@@ -45,10 +44,7 @@ lockdown({
       return __webpack_require__.apply(this, arguments);
     };
 
-  globalThis[NAME_getLavaMoatEvalKitForCompartment] = (
-    resourceId,
-    runtimeKit
-  ) => {
+  module.exports = (resourceId, runtimeKit) => {
     let overrides = create(null);
 
     const { __webpack_require__ } = runtimeKit;
