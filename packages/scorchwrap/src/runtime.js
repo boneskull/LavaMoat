@@ -13,7 +13,8 @@
   const NAME_scopeTerminator = "ST";
   const NAME_runtimeHandler = "RH";
 
-  // strictScopeTerminator from SES is not strict enough - `has` would only return true for globals and here we want to prevent reaching into the scope where local variables from bundle runtime are available.
+  // strictScopeTerminator from SES is not strict enough - `has` would only return true for globals 
+  // and here we want to prevent reaching into the scope where local variables from bundle runtime are available.
   const stricterScopeTerminator = freeze(
     new Proxy(
       freeze(create(null)),
@@ -47,6 +48,7 @@
   module.exports = (resourceId, runtimeKit) => {
     let overrides = create(null);
 
+    // modules may reference `require` dynamically, but that's something we don't want to allow
     const { __webpack_require__ } = runtimeKit;
     let { module } = runtimeKit;
 

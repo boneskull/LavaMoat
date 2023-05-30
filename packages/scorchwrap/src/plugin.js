@@ -233,6 +233,26 @@ class ScorchWrapPlugin {
 
     // this.replacementPlugin.apply(compiler);
 
+    // compiler.options.module.rules.push({
+    //   test(req) {
+    //     if (
+    //       allowedPaths.some((p) => req.includes(path.join(compiler.context, p)))
+    //     ) {
+    //       return /\.(js|jsx|ts|tsx|md|mdx|mjs)$/i.test(req);
+    //     }
+    //     return false;
+    //   },
+    //   include: compiler.context,
+    //   exclude: [
+    //     /node_modules/,
+    //   ],
+    //   loader: path.resolve(__dirname, './lruntime-oader.js'),
+    //   options: {
+            // policy:
+            //   this.options.policy
+    //    },
+    // });
+
     // compiler.hooks.compilation.tap('EntryDependencyPlugin', (compilation) => {
     //   compilation.hooks.buildModule.tap('EntryDependencyPlugin', (module) => {
     //     // Check if this is the entry module
@@ -246,11 +266,12 @@ class ScorchWrapPlugin {
     //   });
     // });
 
+
     compiler.options.entry.main.import.unshift(RUNTIME_PATH);
 
     let mainCompilationWarnings;
 
-    compiler.hooks.compilation.tap(
+    compiler.hooks.thisCompilation.tap(
       PLUGIN_NAME,
       (compilation, { normalModuleFactory }) => {
         if (!mainCompilationWarnings) {
@@ -266,6 +287,7 @@ class ScorchWrapPlugin {
             compilation.compiler.name?.startsWith("mini-css-extract-plugin")
           ) {
             // Check if it's a child compilation used by a specific plugin
+            // TODO: make the list of plugins configurable.
             mainCompilationWarnings.push(
               new WebpackError(
                 "ScorchWrapPlugin: SKIPPING child compilation for" + compilation.compiler.name
