@@ -15,14 +15,17 @@ const path = require("path");
 const {
   NormalModule,
   WebpackError,
-  NormalModuleReplacementPlugin,
+  RuntimeGlobals,
+  RuntimeModule,
   // ModuleDependency,
 } = require("webpack");
 const { wrapper } = require("./wrapper");
 const diag = require("./diagnostics");
 const VirtualModulesPlugin = require("webpack-virtual-modules");
 
+const { readFileSync } = require("fs");
 const { ConcatSource, RawSource } = require("webpack-sources");
+
 // @ts-ignore // this one doesn't have official types
 const RUNTIME_GLOBALS = require("webpack/lib/RuntimeGlobals");
 
@@ -37,9 +40,7 @@ const JAVASCRIPT_MODULE_TYPE_AUTO = "javascript/auto";
 const JAVASCRIPT_MODULE_TYPE_DYNAMIC = "javascript/dynamic";
 const JAVASCRIPT_MODULE_TYPE_ESM = "javascript/esm";
 
-const RUNTIME_SPECIFIER = `_LM_`;
-
-const RUNTIME_PATH = './'+RUNTIME_SPECIFIER;
+const RUNTIME_KEY = `_LM_`;
 
 /**
  * @param {string} path
@@ -112,6 +113,7 @@ const wrapGeneratorMaker = ({ runChecks }) => {
     // Monkey-patching JavascriptGenerator. Yes, this could be nicer.
     // Using features of the generator itself we might be able to achieve the same
     // but it would be more suseptible to changes in webpack.
+    // TODO: consider turning that into a weakset too
     if (generatorInstance.generate.scorchwrap) {
       return generatorInstance;
     }
@@ -132,11 +134,6 @@ const wrapGeneratorMaker = ({ runChecks }) => {
       const originalGeneratedSource = originalGenerate.apply(this, arguments);
       // originalGenerate adds requirements to options.runtimeRequirements
 
-      // TODO: find a nicer way to do it maybe?
-      if (module.rawRequest === RUNTIME_PATH) {
-        return originalGeneratedSource;
-      }
-      // if(module.loaders[0] && module.loaders[0].loader.includes('node_modules/css-loader/dist/cjs.js')) {
       // if (module.rawRequest.includes("node_modules/css-loader/dist/")) {
       //   console.error(">>>", module.rawRequest, module.loaders);
       //   return originalGeneratedSource;
@@ -171,7 +168,7 @@ const wrapGeneratorMaker = ({ runChecks }) => {
         id: packageId,
         runtimeKit: processRequirements(options.runtimeRequirements, module),
         runChecks,
-        evalKitFunctionName: `__webpack_require__('${RUNTIME_PATH}')`,
+        evalKitFunctionName: `__webpack_require__.${RUNTIME_KEY}`,
       });
 
       diag.rawDebug(3, {
@@ -179,17 +176,6 @@ const wrapGeneratorMaker = ({ runChecks }) => {
         requirements: options.runtimeRequirements,
         sourceChanged,
       });
-
-      // isEntryModule is deprecated and breaks bacause no chunk graph available
-      // if(shouldGenerateRuntime && module.isEntryModule()){
-      //   shouldGenerateRuntime = false;
-      //   // add the runtime once.
-      //   before = `
-      //   window.__LM__ = window.__LM__ || ()=>{
-      //     console.log('works')
-      //   };
-      //   `+before;
-      // }
 
       if (module.rawRequest.includes("node_modules/css-loader/dist/")) {
         before = "debugger;" + before;
@@ -214,6 +200,29 @@ const wrapGeneratorMaker = ({ runChecks }) => {
   };
 };
 
+class LavaMoatRuntimeModule extends RuntimeModule {
+  constructor({ policy }) {
+    super("LM_RUNTIME");
+    this.policy = policy;
+  }
+
+  generate() {
+    console.error("------------------runtime-generator");
+    const runtimeCode = readFileSync(
+      path.join(__dirname, "runtime.js"),
+      "utf8"
+    );
+    const runtimeWithPolicy = runtimeCode.replace(
+      `'%%POLICY%%'`,
+      JSON.stringify(this.policy)
+    );
+    return runtimeWithPolicy;
+  }
+}
+
+// =================================================================
+// =================================================================
+
 const PLUGIN_NAME = "ScorchWrapPlugin";
 
 class ScorchWrapPlugin {
@@ -221,59 +230,55 @@ class ScorchWrapPlugin {
    * @constructor
    * @param {ScorchWrapPluginOptions} [options]
    */
-  constructor(options = {}) {
+  constructor(options = { policy: {} }) {
     this.options = options;
     diag.level = options.diagnosticsVerbosity || 0;
 
-    // still couldn't make it resolve otherwise
-    this.virtualModules = new VirtualModulesPlugin({
-      [RUNTIME_PATH]: "",
-    });
   }
   /**
    * @param {Compiler} compiler the compiler instance
    * @returns {void}
    */
   apply(compiler) {
-    this.virtualModules.apply(compiler);
-    // compiler.hooks.compilation.tap('EntryDependencyPlugin', (compilation) => {
-    //   compilation.hooks.buildModule.tap('EntryDependencyPlugin', (module) => {
-    //     // Check if this is the entry module
-    //     if (module.isEntryModule()) {
-    //       // Add a dependency on lodash
-    //       console.error('aaaaa');
-    //       const dep = new ModuleDependency();
-    //       dep.request = '_LM_RUNTIME_';
-    //       module.addDependency(dep);
-    //     }
-    //   });
-    // });
+    const options = this.options;
 
     // Concatenation won't work with wrapped modules. Have to disable it.
     compiler.options.optimization.concatenateModules = false;
     // TODO: Research. If we fiddle a little with how we wrap the module, it might be possible to get inlining to work eventually.
-
-    compiler.options.entry.main.import.unshift(RUNTIME_PATH);
-
-    compiler.options.module.rules.push({
-      test(req) {
-        req.endsWith(RUNTIME_PATH.substring(1)) &&
-          console.error(">>>>", req, this);
-        return req.endsWith(RUNTIME_PATH.substring(1));
-      },
-      include: compiler.context,
-      exclude: [/node_modules/],
-      loader: path.resolve(__dirname, "./runtime-loader.js"),
-      options: {
-        policy: this.options.policy,
-      },
-    });
 
     let mainCompilationWarnings;
 
     compiler.hooks.thisCompilation.tap(
       PLUGIN_NAME,
       (compilation, { normalModuleFactory }) => {
+        // federation inspired stuff
+
+        const onceForChunkSet = new WeakSet();
+
+        // Define a handler function to be called for each chunk in the compilation.
+        compilation.hooks.additionalChunkRuntimeRequirements.tap(
+          PLUGIN_NAME + "_runtime",
+          (chunk, set) => {
+            // If the chunk has already been processed, skip it.
+            if (onceForChunkSet.has(chunk)) return;
+            set.add(RuntimeGlobals.onChunksLoaded);
+
+            // Mark the chunk as processed by adding it to the WeakSet.
+            onceForChunkSet.add(chunk);
+
+            if (chunk.hasRuntime()) {
+              // Add the runtime module to the chunk, which handles
+              // the runtime logic for wrapping with lavamoat.
+              compilation.addRuntimeModule(
+                chunk,
+                new LavaMoatRuntimeModule(options.policy)
+              );
+            }
+          }
+        );
+
+        // / federation inspired stuff end
+
         if (!mainCompilationWarnings) {
           mainCompilationWarnings = compilation.warnings;
           mainCompilationWarnings.push(

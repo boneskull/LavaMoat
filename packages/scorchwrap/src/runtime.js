@@ -13,9 +13,9 @@
   const NAME_scopeTerminator = "ST";
   const NAME_runtimeHandler = "RH";
 
-  const policy = '%%POLICY%%';
+  const policy = "%%POLICY%%";
 
-  // strictScopeTerminator from SES is not strict enough - `has` would only return true for globals 
+  // strictScopeTerminator from SES is not strict enough - `has` would only return true for globals
   // and here we want to prevent reaching into the scope where local variables from bundle runtime are available.
   const stricterScopeTerminator = freeze(
     new Proxy(
@@ -47,7 +47,7 @@
       return __webpack_require__.apply(this, arguments);
     };
 
-  module.exports = (resourceId, runtimeKit) => {
+  const lavamoatRuntimeWrapper = (resourceId, runtimeKit) => {
     let overrides = create(null);
 
     // modules may reference `require` dynamically, but that's something we don't want to allow
@@ -96,4 +96,10 @@
       [NAME_globalThis]: compartment_ekhm_Map.get(resourceId).globalThis,
     };
   };
+
+  if (typeof module !== "undefined") {
+    module.exports = lavamoatRuntimeWrapper;
+  } else {
+    __webpack_require__._LM_ = lavamoatRuntimeWrapper;
+  }
 })();
