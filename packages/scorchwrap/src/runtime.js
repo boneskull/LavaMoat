@@ -13,6 +13,8 @@
   const NAME_scopeTerminator = "ST";
   const NAME_runtimeHandler = "RH";
 
+  const policy = '%%POLICY%%';
+
   // strictScopeTerminator from SES is not strict enough - `has` would only return true for globals 
   // and here we want to prevent reaching into the scope where local variables from bundle runtime are available.
   const stricterScopeTerminator = freeze(

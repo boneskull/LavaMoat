@@ -30,6 +30,7 @@ module.exports = {
   // ... other webpack configuration properties
   plugins: [
     new ScorchWrapPlugin({
+      policy: { ... LavaMoat policy structure ... }
       runChecks: true,
     //   diagnosticsVerbosity: 2,
     }),

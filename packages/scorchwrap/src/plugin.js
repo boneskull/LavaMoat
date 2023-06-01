@@ -8,6 +8,7 @@
 /** @typedef {object} ScorchWrapPluginOptions
  * @property {boolean} [runChecks] - check resulting code with wrapping for correctnesss
  * @property {number} [diagnosticsVerbosity] - a number representing diagnostics output verbosity, the larger the more overwhelming
+ * @property {object} policy - LavaMoat policy
  */
 
 const path = require("path");
@@ -19,6 +20,7 @@ const {
 } = require("webpack");
 const { wrapper } = require("./wrapper");
 const diag = require("./diagnostics");
+const VirtualModulesPlugin = require("webpack-virtual-modules");
 
 const { ConcatSource, RawSource } = require("webpack-sources");
 // @ts-ignore // this one doesn't have official types
@@ -35,7 +37,9 @@ const JAVASCRIPT_MODULE_TYPE_AUTO = "javascript/auto";
 const JAVASCRIPT_MODULE_TYPE_DYNAMIC = "javascript/dynamic";
 const JAVASCRIPT_MODULE_TYPE_ESM = "javascript/esm";
 
-const RUNTIME_PATH = "./_LM_RUNTIME_"; //path.resolve(__dirname, "./runtime.js");
+const RUNTIME_SPECIFIER = `_LM_`;
+
+const RUNTIME_PATH = './'+RUNTIME_SPECIFIER;
 
 /**
  * @param {string} path
@@ -108,6 +112,9 @@ const wrapGeneratorMaker = ({ runChecks }) => {
     // Monkey-patching JavascriptGenerator. Yes, this could be nicer.
     // Using features of the generator itself we might be able to achieve the same
     // but it would be more suseptible to changes in webpack.
+    if (generatorInstance.generate.scorchwrap) {
+      return generatorInstance;
+    }
     const originalGenerate = generatorInstance.generate;
     /**
      *
@@ -202,6 +209,7 @@ const wrapGeneratorMaker = ({ runChecks }) => {
         );
       }
     };
+    generatorInstance.generate.scorchwrap = true;
     return generatorInstance;
   };
 };
@@ -217,42 +225,17 @@ class ScorchWrapPlugin {
     this.options = options;
     diag.level = options.diagnosticsVerbosity || 0;
 
-    // this.replacementPlugin = new NormalModuleReplacementPlugin(
-    //   /_LM_RUNTIME_/,
-    //   RUNTIME_PATH
-    // );
+    // still couldn't make it resolve otherwise
+    this.virtualModules = new VirtualModulesPlugin({
+      [RUNTIME_PATH]: "",
+    });
   }
   /**
    * @param {Compiler} compiler the compiler instance
    * @returns {void}
    */
   apply(compiler) {
-    // Concatenation won't work with wrapped modules. Have to disable it.
-    compiler.options.optimization.concatenateModules = false;
-    // TODO: Research. If we fiddle a little with how we wrap the module, it might be possible to get inlining to work eventually.
-
-    // this.replacementPlugin.apply(compiler);
-
-    // compiler.options.module.rules.push({
-    //   test(req) {
-    //     if (
-    //       allowedPaths.some((p) => req.includes(path.join(compiler.context, p)))
-    //     ) {
-    //       return /\.(js|jsx|ts|tsx|md|mdx|mjs)$/i.test(req);
-    //     }
-    //     return false;
-    //   },
-    //   include: compiler.context,
-    //   exclude: [
-    //     /node_modules/,
-    //   ],
-    //   loader: path.resolve(__dirname, './lruntime-oader.js'),
-    //   options: {
-            // policy:
-            //   this.options.policy
-    //    },
-    // });
-
+    this.virtualModules.apply(compiler);
     // compiler.hooks.compilation.tap('EntryDependencyPlugin', (compilation) => {
     //   compilation.hooks.buildModule.tap('EntryDependencyPlugin', (module) => {
     //     // Check if this is the entry module
@@ -266,8 +249,25 @@ class ScorchWrapPlugin {
     //   });
     // });
 
+    // Concatenation won't work with wrapped modules. Have to disable it.
+    compiler.options.optimization.concatenateModules = false;
+    // TODO: Research. If we fiddle a little with how we wrap the module, it might be possible to get inlining to work eventually.
 
     compiler.options.entry.main.import.unshift(RUNTIME_PATH);
+
+    compiler.options.module.rules.push({
+      test(req) {
+        req.endsWith(RUNTIME_PATH.substring(1)) &&
+          console.error(">>>>", req, this);
+        return req.endsWith(RUNTIME_PATH.substring(1));
+      },
+      include: compiler.context,
+      exclude: [/node_modules/],
+      loader: path.resolve(__dirname, "./runtime-loader.js"),
+      options: {
+        policy: this.options.policy,
+      },
+    });
 
     let mainCompilationWarnings;
 
@@ -290,14 +290,16 @@ class ScorchWrapPlugin {
             // TODO: make the list of plugins configurable.
             mainCompilationWarnings.push(
               new WebpackError(
-                "ScorchWrapPlugin: SKIPPING child compilation for" + compilation.compiler.name
+                "ScorchWrapPlugin: SKIPPING child compilation for" +
+                  compilation.compiler.name
               )
             );
             return;
           } else {
             mainCompilationWarnings.push(
               new WebpackError(
-                "ScorchWrapPlugin: Entered child compilation for " + compilation.compiler.name
+                "ScorchWrapPlugin: Entered child compilation for " +
+                  compilation.compiler.name
               )
             );
           }

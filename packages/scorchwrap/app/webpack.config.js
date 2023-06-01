@@ -1,11 +1,6 @@
 const ScorchWrap = require("../src/plugin.js");
 const { ProgressPlugin } = require("webpack");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-var VirtualModulesPlugin = require('webpack-virtual-modules');
-
-var virtualModules = new VirtualModulesPlugin({
-  './_LM_RUNTIME_': require('fs').readFileSync('../src/runtime.js').toString(),
-});
 
 module.exports = {
   entry: "./app.js",
@@ -20,10 +15,17 @@ module.exports = {
   // devtool: "source-map",
   plugins: [
     new ScorchWrap({
+      policy: {
+        resources: {
+          "app": {
+            "ZZZZZZZZZZ":1
+          }
+        }
+      },
       runChecks: true,
       diagnosticsVerbosity: 2,
     }),
-    virtualModules,
+    // virtualModules,
     new ProgressPlugin(),
     new MiniCssExtractPlugin({
       filename: 'styles/[name].css',
