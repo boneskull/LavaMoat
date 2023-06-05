@@ -1,35 +1,43 @@
 const ScorchWrap = require("../src/plugin.js");
 const { ProgressPlugin } = require("webpack");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const path = require("path");
+
 
 module.exports = {
-  entry: "./app.js",
+  entry: {
+    app: "./app.js",
+  },
   // both modes work
   // mode: "production",
   mode: "development",
   output: {
-    filename: "app.bundle.js",
+    filename: "[name].js",
+    path: path.resolve(__dirname, "dist"),
   },
   // sourcemaps remain correct and don't seem to contain artifacts from the wrapper
   devtool: false,
   // devtool: "source-map",
   plugins: [
     new ScorchWrap({
-      policy: {
-        resources: {
-          "app": {
-            "ZZZZZZZZZZ":1
-          }
-        }
+      lockdown: {
+        errorTaming: "unsafe",
+        mathTaming: "unsafe",
+        dateTaming: "unsafe",
       },
+      policy: require('./lavamoat/policy.json'),
       runChecks: true,
       diagnosticsVerbosity: 2,
     }),
     // virtualModules,
     new ProgressPlugin(),
     new MiniCssExtractPlugin({
-      filename: 'styles/[name].css',
-      experimentalUseImportModule: false
+      filename: "styles/[name].css",
+      // experimentalUseImportModule: false, // turns off some module execution at build time
+    }),
+    new HtmlWebpackPlugin({
+      template: './index.html'
     }),
   ],
   module: {
@@ -60,9 +68,17 @@ module.exports = {
           MiniCssExtractPlugin.loader,
           // "style-loader",
           "css-loader",
+          ScorchWrap.ignore,
         ],
         sideEffects: true,
       },
+      { 
+        // MiniCssExtractPlugin with their default experimentalUseImportModule 
+        // executes css-loader inside modules at runtime. Gotta avoid wrapping that.
+        // With enough work, we could ship default policies for popular plugins that use this and bundle lockdown but that seems like an overkill
+        test: /node_modules\/css-loader\/dist\/.*\.js$/,
+        use: [ScorchWrap.ignore]
+      }
     ],
   },
 };
