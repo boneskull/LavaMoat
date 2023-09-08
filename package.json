@@ -52,7 +52,7 @@
   "version": "0.0.0",
   "lavamoat": {
     "allowScripts": {
-      "lerna>nx": false,
+      "lerna>nx": true,
       "lerna>nx>@parcel/watcher": false,
       "$root$": true
     }
