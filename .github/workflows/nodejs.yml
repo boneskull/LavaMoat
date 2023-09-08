@@ -20,9 +20,9 @@ jobs:
         uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: npm
       - name: Upgrade npm # for workspace support
-        run: npm i -g npm@9 # npm@9 supports our supported Node.js versions
+        run: npm i -g npm@9 # npm@9 supports Node.js v14 and newer
       - name: Install Dependencies
         uses: bahmutov/npm-install@1a235c31658a322a3b024444759650ee6345c26d # tag=v1
         with:
@@ -30,5 +30,30 @@ jobs:
           install-command: npm ci --foreground-scripts
       - name: Lint
         run: npm run lint
+      - name: Test
+        run: npm test
+
+  platform-compatibility-test:
+    name: Test platform compatibility
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS-latest, windows-latest]
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # tag=v3
+      - name: Use Node.js
+        uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # tag=v3
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install Dependencies
+        uses: bahmutov/npm-install@1a235c31658a322a3b024444759650ee6345c26d # tag=v1
+        with:
+          useRollingCache: true
+          install-command: npm ci --foreground-scripts
       - name: Test
         run: npm test
