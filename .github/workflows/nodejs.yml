@@ -53,7 +53,7 @@ jobs:
       - name: Install Dependencies
         uses: bahmutov/npm-install@1a235c31658a322a3b024444759650ee6345c26d # tag=v1
         with:
-          useRollingCache: true
+          #useRollingCache: true
           install-command: npm ci --foreground-scripts
       - name: Test
         run: npm test

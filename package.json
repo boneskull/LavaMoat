@@ -53,7 +53,7 @@
   "lavamoat": {
     "allowScripts": {
       "lerna>nx": true,
-      "lerna>nx>@parcel/watcher": false,
+      "lerna>nx>@parcel/watcher": true,
       "$root$": true
     }
   },
