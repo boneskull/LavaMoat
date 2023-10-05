@@ -14,3 +14,4 @@ ignores:
   - 'one'
   # types
   - '@types/json-stable-stringify'
+  - '@types/merge-deep'
