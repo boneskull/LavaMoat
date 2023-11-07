@@ -52,11 +52,11 @@ function overrideDepsWithLocalPackages(projectDir) {
     { cwd: projectDir, encoding: 'utf8' }
   )
   if (res2.status !== 0) {
-    const err = res.stderr
+    const err = res2.stderr
     console.error({
       err,
-      out: res.stdout,
-      status: res.status,
+      out: res2.stdout,
+      status: res2.status,
     })
     throw new Error(err)
   }
