@@ -1,6 +1,5 @@
 // @ts-check
 
-/* eslint-disable n/no-missing-require */
 const {
   parseForPolicy,
   LavamoatModuleRecord,
@@ -566,16 +565,19 @@ function prepareModuleInitializerArgs(
   moduleObj,
   moduleData
 ) {
-  const require = requireRelativeWithContext
+  /** @type {NodeJS.Require} */
+  const require = /** @type {any} */ (requireRelativeWithContext)
   const module = moduleObj
   const exports = moduleObj.exports
   const __filename = moduleData.file
   const __dirname = path.dirname(__filename)
-  require.resolve = (requestedName) => {
-    throw new Error(
-      'require.resolve not implemented in lavamoat-core test harness'
-    )
-  }
+  require.resolve = /** @type {any} */ (
+    () => {
+      throw new Error(
+        'require.resolve not implemented in lavamoat-core test harness'
+      )
+    }
+  )
   return [exports, require, module, __filename, __dirname]
 }
 
