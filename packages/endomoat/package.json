@@ -39,7 +39,8 @@
     "@types/node": "20.10.6",
     "lavamoat-core": "^15.0.0",
     "ses": "1.0.1",
-    "type-fest": "4.7.1"
+    "type-fest": "4.7.1",
+    "yargs": "17.7.2"
   },
   "devDependencies": {
     "@endo/eslint-plugin": "2.0.0",

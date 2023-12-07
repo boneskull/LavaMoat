@@ -5,6 +5,7 @@ import { importLocation } from '@endo/compartment-mapper'
 import { evadeCensor } from '@endo/evasive-transform'
 import { applySourceTransforms } from 'lavamoat-core'
 import fs from 'node:fs'
+import { pathToFileURL } from 'node:url'
 import { toEndoPolicy } from './policy-converter.js'
 
 export * from './constants.js'
@@ -105,7 +106,11 @@ export async function run(entrypointPath, policyOrOpts, opts = {}) {
   }
   const { readPower = defaultReadPower } = opts
 
-  const { namespace } = await importLocation(readPower, `${entrypointPath}`, {
+  const url =
+    entrypointPath instanceof URL
+      ? `${entrypointPath}`
+      : `${pathToFileURL(entrypointPath)}`
+  const { namespace } = await importLocation(readPower, url, {
     policy,
     globals: globalThis,
     importHook,
