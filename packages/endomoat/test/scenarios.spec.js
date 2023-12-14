@@ -1,10 +1,13 @@
 import test from 'ava'
+// @ts-expect-error - needs types
 import { loadScenarios } from 'lavamoat-core/test/scenarios/index.js'
+// @ts-expect-error - needs types
 import { runAndTestScenario } from 'lavamoat-core/test/util.js'
 import { runScenario } from './helpers.js'
 
 const GLOBAL_WRITE_REGEX = /".+?":"write"/g
 
+// @ts-expect-error - needs types
 function policyHasWritableGlobal(scenario) {
   return (
     GLOBAL_WRITE_REGEX.test(JSON.stringify(scenario.config)) ||

@@ -1,5 +1,6 @@
 import capcon from 'capture-console'
 import { mergePolicy } from 'lavamoat-core'
+// @ts-expect-error - needs types
 import { prepareScenarioOnDisk } from 'lavamoat-core/test/util.js'
 import { Volume, createFsFromVolume } from 'memfs'
 import path from 'node:path'
@@ -82,7 +83,7 @@ function capture() {
     return { stdout, stderr }
   }
 }
-
+// @ts-expect-error - needs types
 export async function runScenario({ scenario }) {
   const vol = new Volume()
   const fs = createFsFromVolume(vol)
