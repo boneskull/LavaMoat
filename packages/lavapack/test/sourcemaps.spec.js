@@ -5,40 +5,40 @@ const test = require('ava')
 // const UglifyJS = require('uglify-js')
 // const { SourceMapConsumer } = require('source-map')
 
-test.skip('sourcemaps - adjust maps for wrapper', async (t) => {
-  const { wrapIntoModuleInitializer } = require('../src/sourcemaps')
-  const fooSource = `
-  var two = 1 + 1
-  throw new Error('Boom')
-  var three = two + 1
-  `
+// test.skip('sourcemaps - adjust maps for wrapper', async (t) => {
+//   const { wrapIntoModuleInitializer } = require('../src/sourcemaps')
+//   const fooSource = `
+//   var two = 1 + 1
+//   throw new Error('Boom')
+//   var three = two + 1
+//   `
 
-  const result = UglifyJS.minify(
-    { './foo.js': fooSource },
-    {
-      // skip logical compression like removing unused stuff
-      compress: false,
-      sourceMap: {
-        filename: './foo.js',
-        // inline sourcemaps with sources included
-        url: 'inline',
-        includeSources: true,
-      },
-    }
-  )
+//   const result = UglifyJS.minify(
+//     { './foo.js': fooSource },
+//     {
+//       // skip logical compression like removing unused stuff
+//       compress: false,
+//       sourceMap: {
+//         filename: './foo.js',
+//         // inline sourcemaps with sources included
+//         url: 'inline',
+//         includeSources: true,
+//       },
+//     }
+//   )
 
-  if (result.error) {
-    t.ifError(result.error)
-  }
+//   if (result.error) {
+//     t.ifError(result.error)
+//   }
 
-  // ensure minification worked
-  t.true(indicesOf('\n', fooSource).length > 1)
-  t.is(indicesOf('\n', result.code).length, 1)
+//   // ensure minification worked
+//   t.true(indicesOf('\n', fooSource).length > 1)
+//   t.is(indicesOf('\n', result.code).length, 1)
 
-  // wrap into bundle with external sourcemaps
-  const wrappedSourceMeta = wrapIntoModuleInitializer(result.code)
-  await validateSourcemaps(t, wrappedSourceMeta)
-})
+//   // wrap into bundle with external sourcemaps
+//   const wrappedSourceMeta = wrapIntoModuleInitializer(result.code)
+//   await validateSourcemaps(t, wrappedSourceMeta)
+// })
 
 function indicesOf(substring, string) {
   const result = []
