@@ -107,8 +107,9 @@ function createModuleInspector(opts) {
   }
 
   /**
-   * @param {AST} ast
-   * @returns {ast is import('@babel/parser').ParseResult<import('@babel/types').File>}
+   *
+   * @param {import('@babel/types').File} ast
+   * @returns {ast is AST}
    */
   function isParsedAST(ast) {
     return 'errors' in ast
@@ -527,6 +528,5 @@ function getDefaultPaths(policyName) {
  */
 
 /**
- * @typedef {import('@babel/parser').ParseResult<import('@babel/types').File>
- *   | import('@babel/types').File} AST
+ * @typedef {import('@babel/types').File & {errors: Error[]}} AST
  */
