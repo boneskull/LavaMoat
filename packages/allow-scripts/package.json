@@ -33,7 +33,6 @@
     "!tsconfig.json"
   ],
   "scripts": {
-    "lint:deps": "depcheck",
     "test": "npm run test:run",
     "test:prep": "for d in ./test/projects/*/ ; do (cd \"$d\" && ../../../src/cli.js auto --experimental-bins); done",
     "test:run": "ava"
