@@ -79,8 +79,8 @@ test('builtin - paths soft-bindings preserve "this" but allow override', async (
 
     defineTwo: () => {
       const { Buffer } = require('buffer')
-      const thisChecker = require('thisChecker')
-      const { SomeClass } = require('someClass')
+      const thisChecker = require('abc')
+      const { SomeClass } = require('xyz')
       // this test ensures "Buffer.prototype.slice" is copied in a way that allows "this" to be overridden
       module.exports.overrideCheck = (buf) =>
         Buffer.prototype.slice.call(buf, 1, 2)[0] === buf[1]
@@ -108,8 +108,8 @@ test('builtin - paths soft-bindings preserve "this" but allow override', async (
           builtin: {
             // these paths are carefully constructed to try and split the fn from its parent
             'buffer.Buffer.prototype.slice': true,
-            'thisChecker.check': true,
-            'someClass.SomeClass': true,
+            'abc.check': true,
+            'xyz.SomeClass': true,
           },
         },
       },
@@ -121,14 +121,14 @@ test('builtin - paths soft-bindings preserve "this" but allow override', async (
     },
     builtin: {
       buffer: require('buffer'),
-      thisChecker: (() => {
+      abc: (() => {
         const parent = {}
         parent.check = function () {
           return this === parent
         }
         return parent
       })(),
-      someClass: { SomeClass: class SomeClass {} },
+      xyz: { SomeClass: class SomeClass {} },
     },
   })
 
