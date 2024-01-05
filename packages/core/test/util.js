@@ -9,7 +9,6 @@ const {
 const mergeDeep = require('merge-deep')
 const { runInContext, createContext } = require('vm')
 const path = require('node:path')
-const { promises: fs } = require('fs')
 var tmp = require('tmp-promise')
 const stringify = require('json-stable-stringify')
 const { applySourceTransforms } = require('../src/sourceTransforms.js')
@@ -30,11 +29,12 @@ module.exports = {
 }
 
 /**
- * @typedef {Partial<import('../src/parseForPolicy').ParseForPolicyOpts> & {files: import('./scenarios/scenario').NormalizedScenarioJSFile[]}} GeneratePolicyFromFilesOpts
+ * @typedef {Partial<import('../src/parseForPolicy').ParseForPolicyOpts> & {
+ *   files: import('./scenarios/scenario').NormalizedScenarioJSFile[]
+ * }} GeneratePolicyFromFilesOpts
  */
 
 /**
- *
  * @param {GeneratePolicyFromFilesOpts} opts
  * @returns
  */
@@ -65,8 +65,10 @@ async function generatePolicyFromFiles({ files, ...opts }) {
 }
 
 /**
- * Given an incomplete scenario definition, normalize it in preparation for running.
- * @template [Result=unknown]
+ * Given an incomplete scenario definition, normalize it in preparation for
+ * running.
+ *
+ * @template [Result=unknown] Default is `unknown`
  * @param {import('./scenarios/scenario').Scenario<Result>} scenario
  * @returns {import('./scenarios/scenario').NormalizedScenario<Result>}
  */
@@ -336,14 +338,14 @@ function createHookedConsole() {
 }
 
 /**
- * @template [Result=unknown]
+ * @template [Result=unknown] Default is `unknown`
  * @typedef PlatformRunScenarioOpts
  * @property {import('./scenarios/scenario').NormalizedScenario<Result>} scenario
  * @property {boolean} [runWithPrecompiledModules]
  */
 
 /**
- * @template [Result=unknown]
+ * @template [Result=unknown] Default is `unknown`
  * @callback PlatformRunScenario
  * @param {PlatformRunScenarioOpts<Result>} opts
  * @returns {Promise<Result>}
@@ -352,9 +354,10 @@ function createHookedConsole() {
 /**
  * Run the given scenario.
  *
- * The `scenario` itself should be passed thru `createScenarioFromScaffold` to normalize it.
+ * The `scenario` itself should be passed thru `createScenarioFromScaffold` to
+ * normalize it.
  *
- * @template [Result=unknown]
+ * @template [Result=unknown] Default is `unknown`
  * @type {PlatformRunScenario<Result>}
  */
 async function runScenario({ scenario, runWithPrecompiledModules = false }) {
@@ -398,8 +401,8 @@ async function runScenario({ scenario, runWithPrecompiledModules = false }) {
       }
       const moduleRecord = files[id]
       /**
-       * @todo Need a type for "module data"
        * @type {any}
+       * @todo Need a type for "module data"
        */
       const moduleData = {
         id: moduleRecord.specifier,
@@ -451,20 +454,31 @@ async function runScenario({ scenario, runWithPrecompiledModules = false }) {
 }
 
 /**
- * The subset of the `fs/promises` module that is used by `prepareScenarioOnDisk`.
+ * The subset of the `fs/promises` module that is used by
+ * `prepareScenarioOnDisk`.
+ *
  * @typedef FsPromiseApi
- * @property {(dir: string, opts?: import('node:fs').MakeDirectoryOptions & {recursive: true}) => Promise<string|undefined>} mkdir
+ * @property {(
+ *   dir: string,
+ *   opts?: import('node:fs').MakeDirectoryOptions & { recursive: true }
+ * ) => Promise<string | undefined>} mkdir
  * @property {(filepath: string, data: any) => Promise<void>} writeFile
  */
 
 /**
- * Prepares a scenario on disk by writing files based on the provided scenario object.
+ * Prepares a scenario on disk by writing files based on the provided scenario
+ * object.
+ *
  * @param {Object} options - The options for preparing the scenario.
- * @param {FsPromiseApi} [options.fs] - The file system module to use (default: `node:fs/promises`).
- * @param {Object} options.scenario - The scenario object containing the files to write.
- * @param {string} [options.policyName='policies'] - The name of the policy directory (default: 'policies').
+ * @param {FsPromiseApi} [options.fs] - The file system module to use (default:
+ *   `node:fs/promises`).
+ * @param {import('./scenarios/scenario').Scenario} options.scenario - The
+ *   scenario object containing the files to write.
+ * @param {string} [options.policyName='policies'] - The name of the policy
+ *   directory (default: 'policies'). Default is `'policies'`
  * @param {string} [options.projectDir] - The project directory path.
- * @returns {Promise<{projectDir: string, policyDir: string}>} - An object containing the project directory path and the policy directory path.
+ * @returns {Promise<{ projectDir: string; policyDir: string }>} - An object
+ *   containing the project directory path and the policy directory path.
  */
 async function prepareScenarioOnDisk({
   fs = require('node:fs/promises'),
@@ -517,7 +531,6 @@ async function prepareScenarioOnDisk({
 }
 
 /**
- *
  * @param {Record<string, import('./scenarios/scenario').ScenarioFile>} files
  * @returns
  */
@@ -537,8 +550,8 @@ function fillInFileDetails(files) {
 /**
  * @param {Record<string, any>} builtinObj
  * @param {string} name
- * @todo Type the module data
  * @returns {any}
+ * @todo Type the module data
  */
 function moduleDataForBuiltin(builtinObj, name) {
   return {
@@ -554,10 +567,9 @@ function moduleDataForBuiltin(builtinObj, name) {
 }
 
 /**
- *
- * @param {((id: string) => unknown) & {resolve: (id: string) => string}} requireRelativeWithContext
- * @param {*} moduleObj
- * @param {*} moduleData
+ * @param {((id: string) => unknown) & { resolve: (id: string) => string }} requireRelativeWithContext
+ * @param {any} moduleObj
+ * @param {any} moduleData
  * @returns
  */
 function prepareModuleInitializerArgs(
@@ -618,7 +630,6 @@ function evaluateWithSourceUrl(filename, content, context) {
 }
 
 /**
- *
  * @param {() => any} testFn
  * @param {Partial<GeneratePolicyFromFilesOpts>} [opts]
  * @returns
@@ -679,7 +690,6 @@ function convertOptsToArgs({ scenario }) {
 }
 
 /**
- *
  * @param {string} func
  * @returns {unknown}
  */
@@ -688,17 +698,16 @@ function functionToString(func) {
 }
 
 /**
- *
- * @template [Result=unknown]
+ * @template [Result=unknown] Default is `unknown`
  * @param {import('ava').ExecutionContext} t
  * @param {import('./scenarios/scenario').NormalizedScenario<Result>} scenario
  * @param {PlatformRunScenario<Result>} platformRunScenario
- * @returns {Promise<Result|undefined>}
+ * @returns {Promise<Result | undefined>}
  */
 async function runAndTestScenario(t, scenario, platformRunScenario) {
-  /** @type {Result|undefined} */
+  /** @type {Result | undefined} */
   let result
-  /** @type {Error|undefined} */
+  /** @type {Error | undefined} */
   let err
   try {
     result = await platformRunScenario({ scenario })
