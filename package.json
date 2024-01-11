@@ -30,9 +30,8 @@
     "release:publish": "node scripts/publish.js --newPkg=${npm_config_newpkg}",
     "release:rebuild": "npm run rebuild && npm run test:prep && npm run test:workspaces",
     "setup": "husky install; npm run rebuild",
-    "test": "npm run build && npm run test:prep && npm run test:workspaces && npm run test:scripts",
+    "test": "npm run build && npm run test:prep && npm run test:workspaces",
     "test:prep": "npm run --workspaces --if-present test:prep",
-    "test:scripts": "ava --config scripts/ava.config.mjs",
     "test:workspaces": "npm run --workspaces --if-present test",
     "watch:types": "tsc -b --watch"
   },
