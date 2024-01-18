@@ -26,8 +26,8 @@
     "rebuild": "npm run --workspaces --if-present rebuild && npm run rebuild:types",
     "rebuild:types": "npm run clean:types && npm run build:types",
     "release": "npm run release:rebuild && npm run release:publish --newPkg=${npm_config_newpkg}",
-    "release:dry-run": "node scripts/publish.js --dryRun --newPkg=${npm_config_newpkg}",
-    "release:publish": "node scripts/publish.js --newPkg=${npm_config_newpkg}",
+    "release:dry-run": "laverna --dryRun --newPkg=${npm_config_newpkg}",
+    "release:publish": "laverna --newPkg=${npm_config_newpkg}",
     "release:rebuild": "npm run rebuild && npm run test:prep && npm run test:workspaces",
     "setup": "husky install; npm run rebuild",
     "test": "npm run build && npm run test:prep && npm run test:workspaces",
@@ -75,8 +75,7 @@
   },
   "ava": {
     "files": [
-      "packages/*/test/*.spec.js",
-      "scripts/*.spec.js"
+      "packages/*/test/*.spec.js"
     ],
     "timeout": "2m"
   },
