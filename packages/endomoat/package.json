@@ -34,11 +34,11 @@
     "test:run": "ava"
   },
   "dependencies": {
-    "@endo/compartment-mapper": "1.0.1",
+    "@endo/compartment-mapper": "1.1.0",
     "@endo/evasive-transform": "1.0.1",
     "@types/node": "20.10.6",
     "lavamoat-core": "^15.0.0",
-    "ses": "1.0.1",
+    "ses": "1.1.0",
     "type-fest": "4.7.1",
     "yargs": "17.7.2"
   },
